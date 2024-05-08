@@ -1,0 +1,272 @@
+---
+title: "STAT380_HW4"
+author: Mia Iceland
+output: html_document
+date: "Due: Saturday, February 10, 2024 by 11:59 PM"
+---
+
+## Instructions
+
+In class, we covered the basics of data wrangling with the basics of linear regression models. The activities that follow are meant to provide further practice with these concepts. NOTE: All required `library` commands **must be** included in the Front Matter section. If you include your `library` commands elsewhere in your code, you will be penalized.
+
+At the conclusion to the activity, you should upload
+
+1. your .html file named LastnameFirstInitial_STAT380_HW4.html 
+2. your .Rmd file named LastnameFirstInitial_STAT380_HW4.Rmd
+
+## Learning Objectives
+This assignment address aspects of the following learning objectives.
+
+1. Students will be able to load datasets from R packages and external sources into the R environment.
+2. Students will be able to identify R functions for and perform data wrangling tasks such as filtering observations based on a criterion, creating new variables, and restructuring data.
+3. Given one or more variables, students will be able to identify appropriate types of visualizations for exploring the distribution of the variable or the relationship between the variables visually.
+4. Given a research question, students will be able to create and customize an appropriate visualization using statistical software.
+5. Given one or more variables, students will be able to calculate summary statistics for exploring the distribution of the variable or the relationship between the variables numerically. 
+6. Given a visualization and summary statistics, students will be able to describe the insights gained from the information.
+7. Fit a linear regression model using statistical software, including situations involving polynomial terms, categorical predictions, and/or interaction terms
+8. Interpret the output of a linear regression model, including coefficient estimates and quality of fit metrics.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter - Clean Environment, Load Libraries, User Defined Functions
+```{r}
+rm(list = ls())
+#Add libraries as needed
+library(tidyverse)
+NOVA <- read.csv("~/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUniversity/Sophomore Year/Stat380/NOVA.csv")
+```
+
+## Problem 1. Housing Prices in Northern Virginia - Data Cleaning
+
+The file NOVA.csv contains a sample of properties in the Northern Virginia region (Arlington County, Fairfax County, and so on) listed on Remax.com in April 2019. The data set contains the following variables:
+
+* Bedrooms - number of bedrooms
+* Bathrooms - number of bathrooms
+* LivingSQFT - square footage of living area
+* Age - age of the house in years
+* DistToWH - distance from house to the White House in miles
+* LotSize - lot size in acres
+* ListingType - type of property (Condo/Townhome OR Single Family)
+* Floors - the number of floors in the house
+* CountySchool - the school district for the county 
+* Garage - the number of garage stalls
+* Price - the price of the home in dollars
+     
+
+#### a. We are going to perform some data wrangling procedures on the dataset. Since the dataset is relatively small, we will keep a copy of the original dataset and make modifications to a copy named `NOVA2`. At this time, create a dataset named `NOVA2` that is a copy of `NOVA`. Use `NOVA2` in the remaining parts of Problem 1.
+
+```{r}
+NOVA2 <-
+  NOVA
+```
+
+
+#### b. We can think of CountySchool as a proxy for the property’s county. How many properties are included from each county? 
+
+```{r}
+NOVA2 %>%
+  group_by(CountySchool) %>%
+  summarize(Count = n())
+```
+
+
+#### c. Use the code below to generate a histogram of `Price` using a binwidth of 200000.  The distribution of house prices is right skewed with several outliers. The heavy red line represents a price of three million dollars ($3M). Properties with a price over $3M are emphasized by the red circles. It looks like there are at least 5 properties with a price of more than $3M. 
+
+- NOTE1: Putting a comma in the number 200,000 when setting the binwidth in R will cause a problem. 
+- **NOTE2: For this problem, all you have to do is remove the `, eval = FALSE` in the R chunk header and makes sure that the plot displays in your markdown document.**
+
+```{r}
+#Create histogram of Prices and highlight outliers
+ggplot(data = NOVA2, mapping = aes(x = Price)) +
+  geom_histogram(binwidth = 200000, color = "black", fill = "lightblue") +
+  labs(x = "Price (in Dollars)",
+       y = "Number of Properties") +
+  scale_x_continuous(labels = scales::comma) + #Removes scientific notation from axis labels
+  geom_vline(xintercept = 3000000, color = "red", linewidth = 2) +
+  geom_point(data = NOVA2[NOVA2$Price > 3000000,],aes(x = Price, y = 0), 
+             color = "red", shape = 1, size = 10)
+```
+
+
+#### d. To investigate what makes these properties unusual, create and display a table showing the properties with a price of more than $3M. (Do NOT overwrite NOVA2 with a sorted version of the dataset when doing this step.) What do you notice about these properties?
+
+```{r}
+NOVA2 %>%
+  filter(Price > 3000000)
+```
+
+What I notice from these properties is that they all have 5 or more bedrooms, 7 or more baths, square feet is 5000 or greater, all containing 3 floors, and all have 2 or more garages. These statistics indicate to me that these houses are large and could even be considered mansions. 
+
+#### e. We are going to refine the scope of our analysis. We only want to model properties worth less the $3M from Arlington and Fairfax counties. Since Loudoun and Prince William counties have very few observations (7 and 1, respectively) and we have not collected enough data from very expensive properties (only 5 properties over $3M), we do not really have enough data to accurately model these properties. Write code that removes the outliers (prices over $3M) AND any properties from Loudoun and Prince William counties from NOVA2. How many rows remain? 
+
+```{r}
+NOVA2 <-
+  NOVA2 %>%
+  filter(Price <= 3000000) %>%
+  filter(CountySchool == "ARLINGTON COUNTY PUBLIC SCHOOLS" | CountySchool == "FAIRFAX COUNTY PUBLIC SCHOOLS")
+```
+
+This dataset contains 1039 rows. 13 rows were removed from the original dataset.
+
+#### f. In modeling housing prices, it is common to do a log (natural) transformation of the `Price`. Create a new variable called `logPrice` in `NOVA2` that represents the natural log of the house's price, create a histogram of `logPrice` using `ggplot`, modify the binwidth so that you are not using the default plot, and comment on the shape of the distribution.
+
+```{r}
+NOVA2 <-
+  NOVA2 %>%
+  mutate(logPrice = log(Price))
+
+ggplot(data = NOVA2, mapping = aes(x = logPrice)) +
+  geom_histogram(binwidth = .1,color = "black", fill = "pink") +
+  labs(x = "Log Price",
+       y = "Number of Properties")
+```
+
+This graph follows the shape of a bell-shaped curve. 
+
+#### g. Create indicator variables for `ListingType` and `CountySchool`. In particular, create a variable in `NOVA2` called `Single` that takes a value of 1 if the property is a "Single Family" home and a value of 0 otherwise. Similarly, create a variable called `Arlington` that takes a value of 1 when the county school is "ARLINGTON COUNTY PUBLIC SCHOOLS" and 0 otherwise.
+
+```{r}
+NOVA2 <-
+  NOVA2 %>%
+  mutate(Single = ifelse(ListingType == "Single Family", 1, 0),
+         Arlington = ifelse(CountySchool == "ARLINGTON COUNTY PUBLIC SCHOOLS", 1, 0))
+```
+
+
+NOTE: To verify that you have performed these steps correctly, double check that the mean of log price is 13.50511 and the mean of Arlington is 0.2637151 (which is the proportion of properties in NOVA2 from Arlington). If you are NOT getting those answers, it will affect future answers. You should fix this before moving forward.
+
+
+## Problem 2. Housing Prices in Northern Virginia - Simple Linear Regression
+
+#### a. Suppose we want to build a simple linear regression model for predicting `logPrice` as a function of `Bathrooms` using the `NOVA2` dataset created through the various steps in Problem 1. We should first determine if a linear relationship is appropriate. Create a scatterplot showing the relationship between the variables and include a linear smoother. Do you think a linear relationship is appropriate?
+
+```{r}
+ggplot(data = NOVA2, mapping = aes(x = Bathrooms, y = logPrice)) +
+  geom_point() +
+  labs(x = "Bathroom",
+       y = "Log Price") +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+I think a linear relationship is appropriate for these 2 variables because the density of the points follow the linear model line. As the number of bathrooms increase, the Log Price also increases. 
+
+#### b. Regardless of your answer to Part b., calculate the correlation between `logPrice` and `Bathrooms`.
+
+```{r}
+NOVA2 %>%
+  summarize(Correlation = cor(x = Bathrooms, y = logPrice))
+```
+
+
+#### c. Regardless of your answer to Part a., build the regression model, display a summary of the model, and write the estimated regression equation. 
+
+```{r}
+model1 <- lm(logPrice ~ Bathrooms, data = NOVA2)
+
+summary(model1)
+```
+
+
+* HINT: I have provided code that you can modify for entering the equation.
+
+$$\hat{y}_i = 12.57 + 0.25x_{i,baths}$$
+
+#### d. Report and interpret $R^2$ for this model.
+
+The $R^2$ for this model is 0.4769. 0.4769 reflects the proportion of total variation in Log Price which is explained by the number of Bathrooms. 
+
+
+#### e. What is the average amount by which the `logPrice` will deviate from the prediction made by the regression line?
+
+The average amount by which the Log Price deviates from the predicted regression line is 0.364. This number is found using the residual standard error equation.
+
+#### f. (Challenge) Recreate the plot from Part a. Then, draw a red line segment on the plot that represents the residual for the observation with the largest number of bathrooms. NOTE: We have not covered a method for drawing a line segment on a plot. You will either have to build on your STAT 184 knowledge or rely on a web search for this.
+
+```{r}
+model <- lm(logPrice ~ Bathrooms, data = NOVA2)
+
+NOVA2 <- 
+  NOVA2 %>%
+  mutate(residual = resid(model))
+
+MaxBathrooms <- 
+  NOVA2 %>% 
+  filter(Bathrooms == max(Bathrooms))
+
+ggplot(data = NOVA2, mapping = aes(x = Bathrooms, y = logPrice)) +
+  geom_point() +
+  labs(x = "Bathroom", y = "Log Price") + 
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_segment(data = MaxBathrooms, aes(x = Bathrooms, y = logPrice, xend = Bathrooms, yend = logPrice + residual), color = "red")
+```
+
+
+## Problem 3 - Housing Prices in Northern Virginia - Multiple Linear Regression
+#### a. Using `NOVA2`, which you created in Problem 1, build a regression model for `logPrice` using `Bathrooms` and the `Arlington` indicator. Display a summary of the model, and write the estimated regression equation.
+
+```{r}
+
+model <- lm(logPrice ~ Bathrooms + Arlington, data = NOVA2)
+
+
+summary(model)
+  
+```
+
+
+* HINT: I have provided code that you can modify for entering the equation.
+
+$$\hat{y}_i = 12.48 + 0.24x_{i,baths} + 0.48x_{i,Arlington}$$
+
+#### b. Explain the relationship between the number of bathrooms and `logPrice` after accounting for location (`Arlington`).
+
+```{r}
+ggplot(data = NOVA2, mapping = aes(x = Bathrooms, y = logPrice)) +
+  geom_point() +
+  labs(x = "Bathroom",
+       y = "Log Price") +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~ Arlington)
+```
+
+In general, regardless of the location of the house, the relationship between of the number of bathrooms to log price is the same. As the number of bathrooms increase, the log price also increases.
+
+#### c. Interpret the coefficient (or slope) with `Arlington` in the context of the problem.
+
+As the number of houses in Arlington increases by 1, the log price increases by 0.48 dollars, on average, assuming the number of bathrooms stay the same.
+
+#### d. What proportion of the total variation in `logPrice` is explained by the model using `Bathrooms` and `Arlington`?
+
+$R^2$ = 0.6519
+
+#### e. What is the average amount by which the `logPrice` will deviate from the prediction made by the regression line?
+
+The residual standard error is 0.297
+
+
+#### f. Report $R^2_{adj}$ for this model.
+
+$R^2_{adj}$ = 0.6512
+
+#### g. Of the 2 models (model from Problem 2 containing bathrooms of the model from Problem 3 containg bathrooms and location indicator (`Arlington`)), which do you think we should use? Explain your reasoning.
+
+The second model is the best model to used based off of 3 different assessments. First, the residual standard error which determines the average amount by which the `logPrice` will deviate from the prediction made by the regression line standard differs from model 1 equaling 0.364 and model 2 equaling .297. The lower the decimal, the smaller the error is, therefore, model 2 is better in this regard. Second, the multiple R-squared output which is the proportion of the total variation in `logPrice` is explained by the model using `Bathrooms` and, for the second model, `Arlington`. The first model has an $R^2$ of 0.4769 and the second model equals 0.6519. For this assessment, the higher the percentage the more accurate the model is working. Finally, the multiple adjusted R-squared which works similar to multiple R-squared but incorporates a penalty for the number of predictors in the model can be used to determine how well the model works. Model 1 has a decimal of 0.4763 while model 2 has a decimal of 0.6512 with the higher the decimal being better.
+
+## Problem 4. Conceptual Questions. (This question will not be graded. Skip it if you wish; however, the question has been included to give you examples of potential short answer questions/vocabulary that I could ask on an exam. To answer each question, write a sentence or two.)
+
+#### a. Explain the difference between simple linear regression and multiple linear regression. 
+
+#### b. Correct the statement: In simple linear regression, the slope represents the change in x for a 1 unit change in y.
+
+#### c. Explain what is meant by extrapolation.
+
+#### d. Explain the difference between supervised learning and unsupervised learning. 
+
+#### e. Explain the difference between regression and classification.
+
+#### f. For `NOVA2`, suppose you built a simple linear regression model for `logPrice` using `LivingSQFT`. Explain how you would use the slope to explain how an increase of 1000 square feet in `LivingSQFT` would affect `logPrice`.
+
+
+

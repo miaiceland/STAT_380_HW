@@ -1,0 +1,102 @@
+---
+title: "STAT380 HW1"
+author: Mia Iceland
+output: html_document
+date: "2024-01-14"
+---
+
+## Front Matter
+```{r}
+library(tidyverse)
+```
+
+## Problem 1
+```{r}
+ggplot(data = iris, mapping = aes(x = Sepal.Length)) +
+  geom_histogram(fill = "red", color = "black", binwidth = .25) +
+  labs(x = "Sepal Length (in cm)",
+       y = "Number of Flowers")
+```
+
+Flowers with the sepal length of 5 cm has the greatest population. As the Sepal length decreases and increases from 5 cm, the number of flowers decreases.
+
+## Problem 2
+```{r}
+ggplot(data = iris, mapping = aes(x = Species)) +
+  geom_bar(fill = "white", color = "black") +
+  labs(x = "Species", y = "Count")
+```
+
+This graph proves that the Iris study provided the same amount of cases for each species of flower: 50 Setosa, Versicolor, and Viginica flowers for a total of 150 cases recorded. 
+
+## Problem 3
+```{r}
+ggplot(data = iris, mapping = aes(x = Sepal.Length, y = Sepal.Width)) +
+  geom_point(shape = 6) +
+  labs(x = "Sepal Length (in cm)",
+       y = "Sepal Width (in cm)") +
+  geom_smooth(method = lm, se = FALSE)
+```
+
+What I have learned from this graph is that as Sepal Length increases Sepal Width slightly decreases. There is a slightly negative, linear relationship between Sepal Length and Sepal Width.
+
+## Problem 4
+```{r}
+ggplot(data = iris, mapping = aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  labs(x = "Sepal Length (in cm)",
+       y = "Sepal Width (in cm)") +
+  geom_smooth(method = lm, se = FALSE, aes(group = Species))
+```
+
+When the flowers are grouped by species, the graph shows that there is a positive, linear relationship between sepal length and sepal width for all three species. 
+
+## Problem 5
+```{r}
+ggplot(data = iris, mapping = aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  scale_color_manual(values = c("orange", "darkblue", "green")) +
+  labs(x = "Sepal Length (in cm)",
+       y = "Sepal Width (in cm)") +
+  geom_smooth(method = lm, se = FALSE, aes(group = Species))
+```
+
+## Problem 6
+```{r}
+ggplot(data = iris, mapping = aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  scale_color_manual(values = c("orange", "darkblue", "green")) +
+  labs(x = "Sepal Length (in cm)",
+       y = "Sepal Width (in cm)") +
+  geom_smooth(method = lm, se = FALSE, aes(group = Species))
+```
+
+"how to change color of points in ggplot"
+
+<https://stackoverflow.com/questions/43770579/how-to-change-the-color-in-geom-point-or-lines-in-ggplot>
+
+## Problem 7
+```{r}
+ggplot(data = iris, mapping = aes(x = Sepal.Length, y = Sepal.Width)) +
+  geom_point() +
+  labs(x = "Sepal Length (in cm)",
+       y = "Sepal Width (in cm)") +
+  facet_grid(~Species) +
+  theme_bw() +
+  geom_smooth(method = lm, aes(group = Species))
+```
+
+"how to remove the gray background from a ggplot graph"
+
+<https://www.geeksforgeeks.org/remove-grid-and-background-from-plot-using-ggplot2-in-r/>
+
+## Problem 8
+```{r}
+ggplot(data = iris, mapping = aes(x = Species, y = Sepal.Width)) +
+  geom_boxplot() +
+  labs(x = "Species",
+       y = "Sepal Width (in cm)") +
+  theme_bw()
+```
+
+

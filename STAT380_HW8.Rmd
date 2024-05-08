@@ -1,0 +1,194 @@
+---
+title: "STAT380_HW8"
+author: Mia Iceland
+output: html_document
+date: "Due: Due on Tuesday, April 9, 2024 by 11:59 PM)"
+---
+
+## Instructions
+
+In class, we introduced 3 methods for selecting the features to be included in a model (forward, backward, LASSO). The activities that follow are meant to provide further practice with these concepts. NOTE: All required `library` commands **must be** included in the Front Matter section. If you include your `library` commands elsewhere in your code, you will be penalized.
+
+At the conclusion to the activity, you should upload
+
+1.  your .html file named LastnameFirstInitial_STAT380_HW8.html
+2.  your .Rmd file named LastnameFirstInitial_STAT380_HW8.Rmd
+
+## Learning Objectives
+This assignment address aspects of the following learning objectives.
+
+1. Students will be able to load datasets from R packages and external sources into the R environment.
+2. Given a statistical learning method, students will be able to restructure the data for use in the corresponding R function.
+3.	Identify the best subset of predictors for a linear regression model using subset selection methods, such as best subsets or stepwise regression, using statistical software.
+4. Apply shrinkage/regularization methods for estimating parameters using statistical software, including selecting a value for the tuning parameter using cross validation.
+5. Interpret the results of LASSO in the context of feature selection.
+6. Compare the ability of competing models to generalize for new data.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Front Matter - Clean Environment, Load Libraries, User Defined Functions
+
+```{r}
+rm(list = ls())
+#Add libraries as needed
+library(tidyverse)
+library(glmnet)
+
+MLB <- read.csv("~/Downloads/MLB.csv")
+```
+
+
+## Problem 1. Baseball Data 
+
+`MLB.csv` contains information about a sample of Major League Baseball (MLB) players from the 1986 and 1987 seasons. Variables include:
+
+* PlayerName-Player’s name
+* AtBat-Number of times at bat in 1986
+* Hits-Number of hits in 1986
+* HmRun-Number of home runs in 1986
+* Runs-Number of runs in 1986
+* RBI-Number of runs batted in in 1986
+* Walks-Number of walks in 1986
+* Years-Number of years in the major leagues
+* CAtBat-Number of times at bat during his career
+* Chits-Number of hits during his career
+* CHmRun-Number of home runs during his career
+* CRuns-Number of runs during his career
+* CRBI-Number of runs batted in during his career
+* CWalks-Number of walks during his career
+* League-factor with levels A (for American) and N (for National) indicating player's league at the end of 1986
+* Division-factor with levels E (for East) and W (for West) indicating player's division at the end of 1986
+* PutOuts-Number of put outs in 1986
+* Assists-Number of assists in 1986
+* Errors-Number of errors in 1986
+* Salary-1987 annual salary on opening day in thousands of dollars
+* NewLeague-factor with levels A (for American) and N (for National) indicating player's league at the beginning of 1987
+
+**Our goal is to predict a baseball player’s 1987 salary on the basis of the other variables in the dataset (excluding player name).**
+
+a. Remove the `PlayerName` column and any players with a missing salary. Name the result `MLB2`. NOTE: `MLB2` should have 263 observations and 20 variables.
+
+```{r}
+MLB2 <-
+  MLB %>%
+  select(-PlayerName) %>%
+  na.omit(Salary)
+```
+
+
+b. In order to use the `glmnet` and/or `cv.glmnet` function for building LASSO regression models, create the input matrix and response variable vector. 
+
+```{r}
+#Create input matrix and response vector
+Xmat <- model.matrix(Salary ~ ., data = MLB2)[ , -1]
+yvec <- MLB2$Salary
+```
+
+
+c. Using a seed of 321, perform an 85/15 training/validation split.
+
+```{r}
+set.seed(321)
+trainInd <- sample(1:nrow(MLB2), floor(0.85 * nrow(MLB2)))
+
+XmatTrain <- Xmat[trainInd, ]
+XmatVal <- Xmat[-trainInd, ]
+yvecTrain <- yvec[trainInd]
+yvecVal <- yvec[-trainInd]
+```
+
+
+d. Using a seed of 12345 and 10-fold cross validation on the training data, use the `cv.glmnet` function to create the plot of MSE as a function of $log(\lambda)$. NOTE: The seed mentioned in this problem should not be used to repeat the training/validation split. Instead, it is the seed for the `cv.glmnet` function which will do the 10-fold cross validation for you.
+
+```{r}
+set.seed(12345)
+model1 <- cv.glmnet(x = XmatTrain, y = yvecTrain, family = "gaussian", alpha = 1, nfolds = 10, lambda = NULL, standardize = TRUE)
+set.seed(NULL)
+
+plot(model1)
+```
+
+
+e. What is the optimal $\lambda$ for LASSO regression based on using the minimum value of MSE rule? Which variables are included using this value of $\lambda$? 
+
+```{r}
+set.seed(12345)
+model1 <- cv.glmnet(x = XmatTrain, y = yvecTrain, family = "gaussian", alpha = 1, lambda = NULL, standardize = TRUE)
+set.seed(NULL)
+
+plot(model1)
+```
+
+
+
+f. What is the optimal $\lambda$ for LASSO regression based on using the 1-standard error (1SE) rule? Which variables are included using this value of $\lambda$? 
+
+```{r}
+#Display the optimal values of lambda
+model1$lambda.min
+model1$lambda.1se
+
+#Store the coefficients associated with the optimal values
+coefLamMin <- predict(model1, s = model1$lambda.min, type = "coefficients")
+coefLam1se <- predict(model1, s = model1$lambda.1se, type = "coefficients")
+
+#Create a data frame for comparing the coefficients
+tempdf <- 
+  data.frame(Variable = row.names(coefLamMin), 
+             lamMin = as.numeric(coefLamMin), 
+             lam1se = as.numeric(coefLam1se))
+
+tempdf
+```
+
+
+g. Using the value of $\lambda$ associated with the minimum MSE, compute **and interpret** the RMSE on validation data.
+
+```{r}
+Yhat <- predict(model1, s = model1$lambda.min,
+                     newx = XmatVal)
+MSE <- mean((yvecVal - Yhat)^2)
+RMSE <- sqrt(MSE)
+RMSE
+```
+
+The RMSE value finds the square root of the average squared difference between the predicted salary and the actual salary (in the validation set). This determines the accuracy of my model's prediction of MLB players' salaries. The lower the RMSE value, the better. 
+
+h. If you were to perform backward elimination for selecting the "best" subset of predictors for predicting salary, which variables would remain in the model?
+
+```{r}
+#Train/Validation split
+XmatTrain_df <- as.data.frame(XmatTrain)
+XmatVal_df <- as.data.frame(XmatVal)
+
+#Build Intercept Only Model. NOTE: ~ 1 tells R that you only want an intercept
+int_only_model <- glm(yvecTrain ~ 1, data = XmatTrain_df)
+
+#Build model with all potential regressors. 
+full_model <- glm(yvecTrain ~ ., data = XmatTrain_df)
+
+#Perform backward elimination
+#Have R do it all
+stats::step(object = full_model, 
+            scope = list(lower = int_only_model, upper = full_model),
+            data = MLB2,
+            direction = "backward")
+
+final_model <- glm(yvecTrain ~ AtBat + Hits + Walks + PutOuts + CAtBat + CRuns + CRBI + CWalks + LeagueN + DivisionW + PutOuts + Assists, data = XmatTrain_df)
+
+Yhat <- predict(final_model, newdata = XmatVal_df, type = "response")
+MSE <- mean((yvecVal - Yhat)^2)
+RMSE <- sqrt(MSE)
+RMSE
+```
+
+Variables which would remain in the model are "AtBat", Hits", "Walks", "PutOuts", "CAtBat", "CRuns", "CRBI", "CWalks", "LeagueN", "DivisionW", "PutOuts", and "Assists".
+
+i. Based on the RMSE for the validation data, which model (the model selected by LASSO regression with $\lambda$ based on the minimum MSE OR the model selected by backward elimination) produced a better RMSE on the validation data? Justify your answer. (Your answer should include the RMSE for both models.)
+
+LASSO Regression produces a better RMSE of 310.1718 than the Backwards Elimination model with an RMSE value of 311.0321. This is because the LASSO Regression has a lower RMSE value, therefore, it contains more accurate predictions than Backwards Elimination.
+
+
