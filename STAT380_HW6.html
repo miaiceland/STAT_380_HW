@@ -415,7 +415,7 @@ library(tidyverse)</code></pre>
 <pre class="r"><code>library(FNN) #Use FNN for knn regression</code></pre>
 <pre><code>## Warning: package &#39;FNN&#39; was built under R version 4.3.1</code></pre>
 <pre class="r"><code># Download Data set
-Ins &lt;- read.csv(&quot;~/Downloads/L02_Insurance_m.csv&quot;)</code></pre>
+Ins &lt;- read.csv(&quot;L02_Insurance_m.csv&quot;)</code></pre>
 </div>
 <div id="dataset" class="section level2">
 <h2>Dataset</h2>
@@ -641,7 +641,7 @@ tempDF &lt;- data.frame(k = 1:maxK, mse = meanMSE, sd = sdMSE)
 #Create plot
 ggplot(data = tempDF, mapping = aes(x = k, y = mse)) +
   geom_errorbar(aes(ymin = mse - sd, ymax = mse + sd), 
-                width = 0.1, 
+                width = 0.1,  
                 color = &quot;red&quot;) +
   geom_line() +
   labs(y = &quot;MSE&quot;, x = &quot;k&quot;)</code></pre>

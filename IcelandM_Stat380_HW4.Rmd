@@ -35,7 +35,7 @@ knitr::opts_chunk$set(echo = TRUE)
 rm(list = ls())
 #Add libraries as needed
 library(tidyverse)
-NOVA <- read.csv("~/Library/CloudStorage/OneDrive-ThePennsylvaniaStateUniversity/Sophomore Year/Stat380/NOVA.csv")
+NOVA <- read.csv("NOVA.csv")
 ```
 
 ## Problem 1. Housing Prices in Northern Virginia - Data Cleaning

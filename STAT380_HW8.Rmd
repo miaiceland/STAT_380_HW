@@ -37,7 +37,7 @@ rm(list = ls())
 library(tidyverse)
 library(glmnet)
 
-MLB <- read.csv("~/Downloads/MLB.csv")
+MLB <- read.csv("MLB.csv")
 ```
 
 

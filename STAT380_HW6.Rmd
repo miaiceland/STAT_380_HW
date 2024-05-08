@@ -40,7 +40,7 @@ library(tidyverse)
 library(FNN) #Use FNN for knn regression
 
 # Download Data set
-Ins <- read.csv("~/Downloads/L02_Insurance_m.csv")
+Ins <- read.csv("L02_Insurance_m.csv")
 
 ```
 

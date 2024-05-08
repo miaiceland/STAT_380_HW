@@ -37,7 +37,7 @@ rm(list = ls())
 #Add libraries as needed
 library(tidyverse)
 library(Lahman)
-L2_insurance_dataset <- read.csv("~/Downloads/L02_Insurance_m.csv")
+L2_insurance_dataset <- read.csv("L02_Insurance_m.csv")
 ```
 
 ## 1. Chapter 4.4 Exercises - Problem 3 
